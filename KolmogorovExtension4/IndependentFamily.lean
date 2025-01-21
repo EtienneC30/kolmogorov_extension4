@@ -87,7 +87,9 @@ lemma preimage_boxI' [DecidableEq ι] {J I : Finset ι} (hJI : J ⊆ I)
     (fun (f : (i : I) → α i) (i : J) ↦ f ⟨i, hJI i.prop⟩)⁻¹' (boxI J t)
       = boxI I (fun (i : ι) ↦ if i ∈ J then t i else (univ : Set (α i))) := by
   ext y
-  simp only [mem_preimage, mem_boxI', mem_ite_univ_right]
+  simp only [mem_preimage]
+  rw [mem_boxI', mem_boxI']
+  simp only [mem_ite_univ_right]
   exact ⟨fun h i _ hiJ ↦ h i hiJ, fun h i hiJ ↦ h i (hJI hiJ) hiJ⟩
 
 end Set
@@ -148,7 +150,7 @@ theorem Measure.subset_pi_eval_boxI' [DecidableEq ι] (I J : Finset ι) (hJI : J
   let f := fun i ↦ P i (if i ∈ J then t i else (univ : Set (α i)))
   have h1 : ∀ (x : ι), x ∈ J → f x = g x := by
     intros x hx
-    simp only [f, dite_eq_ite, hx, ite_true]
+    simp only [f, dite_eq_ite, hx, ite_true, g]
   have h2 : ∀ (x : ι), ¬x ∈ J → f x = 1 := by
     intros x hx
     simp only [f, dite_eq_ite, hx, ite_false, measure_univ]
@@ -183,12 +185,14 @@ theorem proj' (P : ∀ i, Measure (α i)) [∀ i, IsProbabilityMeasure (P i)]
   · exact @isPiSystem_boxesI_of_measurable ι α _ J
   · intros s hs
     rcases (mem_boxesI s C hu).1 hs with ⟨t, ⟨rfl, _⟩⟩
-    rw [Measure.map_apply (measurable_proj₂' I J hJI) (box_measurable J hs)]
+    rw [Measure.map_apply _ (box_measurable J hs)]
+    swap; · exact measurable_restrict₂ hJI
     classical
     change Measure.subset_pi P J (boxI J t) = Measure.subset_pi P I
       ((fun f (i : J) ↦ f ⟨i, hJI i.prop⟩) ⁻¹' boxI J t)
     rw [Measure.subset_pi_eval_boxI, preimage_boxI', Measure.subset_pi_eval_boxI' _ _ hJI]
-  · rw [Measure.map_apply (measurable_proj₂' I J hJI) (box_measurable J _)]
+  · rw [Measure.map_apply _ (box_measurable J _)]
+    swap; · exact measurable_restrict₂ hJI
     simp only [measure_univ, preimage_univ]
     change univ ∈ boxesI J C
     rw [mem_boxesI univ C hu]

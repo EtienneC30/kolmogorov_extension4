@@ -17,7 +17,9 @@ variable {α : Type*} {C : Set (Set α)} {s t : Set α}
 
 section ExtendContent
 
-/-- Build an `AddContent` from an additive function defined on a semiring. -/
+variable {m : ∀ s : Set α, s ∈ C → ℝ≥0∞}
+
+/-- Build an `AddContent` from an additive function defined on a semiring of sets. -/
 noncomputable def extendContent (hC : IsSetSemiring C) (m : ∀ s : Set α, s ∈ C → ℝ≥0∞)
     (m_empty : m ∅ hC.empty_mem = 0)
     (m_add : ∀ (I : Finset (Set α)) (h_ss : ↑I ⊆ C) (_h_dis : PairwiseDisjoint (I : Set (Set α)) id)
@@ -27,31 +29,30 @@ noncomputable def extendContent (hC : IsSetSemiring C) (m : ∀ s : Set α, s �
   empty' := extend_empty hC.empty_mem m_empty
   sUnion' I h_ss h_dis h_mem := by
     simp_rw [← extend_eq m] at m_add
-    rw [m_add I h_ss h_dis h_mem, univ_eq_attach]
-    exact sum_attach _ _
+    rw [m_add I h_ss h_dis h_mem, univ_eq_attach, sum_attach]
 
-theorem extendContent_eq_extend (hC : IsSetSemiring C) (m : ∀ s : Set α, s ∈ C → ℝ≥0∞)
-    (m_empty : m ∅ hC.empty_mem = 0)
+theorem extendContent_eq_extend (hC : IsSetSemiring C) (m_empty : m ∅ hC.empty_mem = 0)
     (m_add : ∀ (I : Finset (Set α)) (h_ss : ↑I ⊆ C) (_h_dis : PairwiseDisjoint (I : Set (Set α)) id)
       (h_mem : ⋃₀ ↑I ∈ C), m (⋃₀ I) h_mem = ∑ u : I, m u (h_ss u.prop)) :
     extendContent hC m m_empty m_add = extend m := rfl
 
-theorem extendContent_eq (hC : IsSetSemiring C) (m : ∀ s : Set α, s ∈ C → ℝ≥0∞)
-    (m_empty : m ∅ hC.empty_mem = 0)
+theorem extendContent_eq (hC : IsSetSemiring C) (m_empty : m ∅ hC.empty_mem = 0)
     (m_add : ∀ (I : Finset (Set α)) (h_ss : ↑I ⊆ C) (_h_dis : PairwiseDisjoint (I : Set (Set α)) id)
       (h_mem : ⋃₀ ↑I ∈ C), m (⋃₀ I) h_mem = ∑ u : I, m u (h_ss u.prop))
     (hs : s ∈ C) :
     extendContent hC m m_empty m_add s = m s hs := by
   rw [extendContent_eq_extend, extend_eq]
 
-theorem extendContent_eq_top (hC : IsSetSemiring C) (m : ∀ s : Set α, s ∈ C → ℝ≥0∞)
-    (m_empty : m ∅ hC.empty_mem = 0)
+theorem extendContent_eq_top (hC : IsSetSemiring C) (m_empty : m ∅ hC.empty_mem = 0)
     (m_add : ∀ (I : Finset (Set α)) (h_ss : ↑I ⊆ C) (_h_dis : PairwiseDisjoint (I : Set (Set α)) id)
       (h_mem : ⋃₀ ↑I ∈ C), m (⋃₀ I) h_mem = ∑ u : I, m u (h_ss u.prop))
     (hs : s ∉ C) :
     extendContent hC m m_empty m_add s = ∞ := by
   rw [extendContent_eq_extend, extend_eq_top m hs]
 
+-- todo: change name?
+/-- An additive content obtained from another one on the same semiring of sets by setting the value
+of each set not in the semiring at `∞`. -/
 protected noncomputable
 def AddContent.extend (hC : IsSetSemiring C) (m : AddContent C) : AddContent C where
   toFun := extend (fun x (_ : x ∈ C) ↦ m x)
@@ -124,10 +125,10 @@ lemma addContent_le_sum_of_subset_sUnion {m : AddContent C} (hC : IsSetSemiring 
 /-- If an `AddContent` is σ-subadditive on a semi-ring of sets, then it is σ-additive. -/
 theorem addContent_iUnion_eq_tsum_of_disjoint_of_addContent_iUnion_le {m : AddContent C}
     (hC : IsSetSemiring C)
-    (m_subadd : ∀ (f : ℕ → Set α) (hf : ∀ i, f i ∈ C) (hf_Union : ⋃ i, f i ∈ C)
-      (_hf_disj : Pairwise (Disjoint on f)), m (⋃ i, f i) ≤ ∑' i, m (f i))
+    (m_subadd : ∀ (f : ℕ → Set α) (_ : ∀ i, f i ∈ C) (_ : ⋃ i, f i ∈ C)
+      (_hf_disj : Pairwise (Function.onFun Disjoint f)), m (⋃ i, f i) ≤ ∑' i, m (f i))
     (f : ℕ → Set α) (hf : ∀ i, f i ∈ C) (hf_Union : (⋃ i, f i) ∈ C)
-    (hf_disj : Pairwise (Disjoint on f)) :
+    (hf_disj : Pairwise (Function.onFun Disjoint f)) :
     m (⋃ i, f i) = ∑' i, m (f i) := by
   refine le_antisymm (m_subadd f hf hf_Union hf_disj) ?_
   refine tsum_le_of_sum_le ENNReal.summable fun I ↦ ?_
@@ -162,7 +163,7 @@ lemma addContent_diff_of_ne_top (m : AddContent C) (hC : IsSetRing C)
   rw [h_union, ENNReal.add_sub_cancel_left (hm_ne_top _ ht)]
 
 lemma addContent_accumulate (m : AddContent C) (hC : IsSetRing C)
-    {s : ℕ → Set α} (hs_disj : Pairwise (Disjoint on s)) (hsC : ∀ i, s i ∈ C) (n : ℕ) :
+    {s : ℕ → Set α} (hs_disj : Pairwise (Function.onFun Disjoint s)) (hsC : ∀ i, s i ∈ C) (n : ℕ) :
       m (Set.Accumulate s n) = ∑ i in Finset.range (n + 1), m (s i) := by
   induction n with
   | zero => simp
@@ -175,8 +176,8 @@ lemma addContent_accumulate (m : AddContent C) (hC : IsSetRing C)
 sets tends to the content of the union. -/
 theorem tendsto_atTop_addContent_iUnion_of_addContent_iUnion_eq_tsum {m : AddContent C}
     (hC : IsSetRing C)
-    (m_iUnion : ∀ (f : ℕ → Set α) (hf : ∀ i, f i ∈ C) (hf_Union : (⋃ i, f i) ∈ C)
-        (_hf_disj : Pairwise (Disjoint on f)), m (⋃ i, f i) = ∑' i, m (f i))
+    (m_iUnion : ∀ (f : ℕ → Set α) (_ : ∀ i, f i ∈ C) (_ : (⋃ i, f i) ∈ C)
+        (_hf_disj : Pairwise (Function.onFun Disjoint f)), m (⋃ i, f i) = ∑' i, m (f i))
     (f : ℕ → Set α) (hf_mono : Monotone f) (hf : ∀ i, f i ∈ C) (hf_Union : ⋃ i, f i ∈ C) :
     Tendsto (fun n ↦ m (f n)) atTop (𝓝 (m (⋃ i, f i))) := by
   classical
@@ -209,8 +210,8 @@ theorem tendsto_atTop_addContent_iUnion_of_addContent_iUnion_eq_tsum {m : AddCon
 
 /-- If an additive content is σ-additive on a set ring, then it is σ-subadditive. -/
 theorem addContent_iUnion_le_of_addContent_iUnion_eq_tsum {m : AddContent C} (hC : IsSetRing C)
-    (m_iUnion : ∀ (f : ℕ → Set α) (hf : ∀ i, f i ∈ C) (hf_Union : (⋃ i, f i) ∈ C)
-      (_hf_disj : Pairwise (Disjoint on f)), m (⋃ i, f i) = ∑' i, m (f i))
+    (m_iUnion : ∀ (f : ℕ → Set α) (_ : ∀ i, f i ∈ C) (_ : (⋃ i, f i) ∈ C)
+      (_hf_disj : Pairwise (Function.onFun Disjoint f)), m (⋃ i, f i) = ∑' i, m (f i))
     (f : ℕ → Set α) (hf : ∀ i, f i ∈ C) (hf_Union : ⋃ i, f i ∈ C) :
     m (⋃ i, f i) ≤ ∑' i, m (f i) := by
   classical

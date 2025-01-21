@@ -3,8 +3,10 @@ Copyright (c) 2023 Rémy Degenne. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Rémy Degenne, Peter Pfaffelhuber
 -/
-import Mathlib.Algebra.BigOperators.Group.Finset
+import Mathlib.Algebra.BigOperators.Group.Finset.Defs
 import Mathlib.Algebra.Order.Ring.Nat
+import Mathlib.Data.Fintype.Card
+import Mathlib.Data.Set.Lattice
 
 /-!
 # Ordered
@@ -63,7 +65,7 @@ noncomputable def finsetLT (J : Finset α) : Fin J.card → Finset α :=
 lemma mem_finsetLT (J : Finset α) (n : Fin J.card) (s : α) :
     s ∈ finsetLT J n ↔ ∃ m < n, s = J.ordered m := by
   rw [finsetLT, mem_map]
-  simp only [mem_filter, Finset.mem_univ, true_and_iff, Equiv.asEmbedding_apply,
+  simp only [mem_filter, Finset.mem_univ, true_and, Equiv.asEmbedding_apply,
     Function.comp_apply, exists_prop]
   simp_rw [@eq_comm _ _ s]
 
